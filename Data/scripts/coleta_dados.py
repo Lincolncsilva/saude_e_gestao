@@ -7,10 +7,10 @@ from io import BytesIO
 
 ## CONFIGURAÇÃO
 
-os.makedirs("./Data/raw/logs", exist_ok = True)
+os.makedirs("./Data/logs", exist_ok = True)
 
 RAW_DIR ="./Data/raw"
-LOG_FILE ="./Data/raw/logs/pipeline.log"
+LOG_FILE ="./Data/logs/pipeline.log"
 URL_BASE = "https://dadosabertos.ans.gov.br/FTP/PDA/demonstracoes_contabeis/"
 
 # Ano anterior e ano vigente para automatizar o dowload

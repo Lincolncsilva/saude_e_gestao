@@ -1,18 +1,14 @@
-# Dados gerados / baixados
-Data/
-data/
-raw/
-processed/
+# Dados gerados / baixados (não versionar)
+Data/raw/
+Data/processed/
+Data/logs/
 
-# Logs
+# Logs em geral
 *.log
-logs/
 **/logs/
 
-# Arquivos temporários comuns
+# Arquivos temporários
 *.zip
-*.csv
-*.xlsx
 __pycache__/
 *.pyc
 .env
