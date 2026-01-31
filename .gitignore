@@ -12,3 +12,4 @@ Data/logs/
 __pycache__/
 *.pyc
 .env
+.~lock.*#

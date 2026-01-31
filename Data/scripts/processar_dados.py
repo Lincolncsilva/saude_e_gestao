@@ -172,11 +172,11 @@ def processar_dados():
     # EXPORT DO CONSOLIDADO #
     # ----------------------#
     # Salvando em CSV
-    path_csv_cons = f"{PROC_DIR}/consolidado_despesas.csv"
+    path_csv_cons = f"{PROC_DIR}/{ano}/consolidado_despesas.csv"
     df_cons.to_csv(path_csv_cons, index=False)
     
     # Gerando consolidado_despesas.zip
-    with zipfile.ZipFile(f'{PROC_DIR}/consolidado_despesas.zip', 'w') as z:
+    with zipfile.ZipFile(f'{PROC_DIR}/{ano}/consolidado_despesas.zip', 'w') as z:
         z.write(path_csv_cons, arcname="consolidado_despesas.csv")
     print('consolidado_despesas.zip realizado com sucesso!')
 
@@ -190,8 +190,13 @@ def processar_dados():
     # Remove colunas duplicadas
     df_desp = df_desp.loc[:, ~df_desp.columns.duplicated()]
 
-    # Desafio Adicional 
-    df_agregado = df_desp.groupby(['RazaoSocial', 'UF'], as_index=False).agg(
+    
+    
+
+    # Desafio Adicional
+    
+    df_trimestral = df_desp.groupby(['RazaoSocial', 'UF', 'Trimestre'], as_index=False)['ValorDespesas'].sum() 
+    df_agregado = df_trimestral.groupby(['RazaoSocial', 'UF'], as_index=False).agg(
         Total_Despesas=('ValorDespesas', 'sum'),
         Media_Trimestral=('ValorDespesas', 'mean'),
         Desvio_Padrao_Despesas=('ValorDespesas', 'std')
