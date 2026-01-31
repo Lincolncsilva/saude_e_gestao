@@ -155,8 +155,8 @@ def processar_dados():
     )
 
     # Auditoria: Valores Negativos
-    df_cons[df_cons["ValorDespesas"] < 0].to_csv(
-        "./Data/processed/auditoria/valor_despesas_negativos.csv", index=False
+    df_cons[df_cons["ValorDespesas"] <= 0].to_csv(
+        "./Data/processed/auditoria/vd_zerados_e_negativos.csv", index=False
     )
 
     # Auditoria de Validação cnpj, valor positivos, razao social
