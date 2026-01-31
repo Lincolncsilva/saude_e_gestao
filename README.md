@@ -35,7 +35,7 @@ Foram inseridas capturas básicas de eventos.log no script para casos de auditor
 **2.2 - Normalização de estruturas**
 
 - Os arquivos podem apresentar variações de **formatos (CSV,XLSX,TXT), encoding e estrutura de colunas**.
-- Por isso, foi implementado modo de leitura dinamico que identifica os formatos de arquivos e aplicam tratamento de encoding.
+- Por isso, foi implementado modo de leitura dinâmico que identifica os formatos de arquivos e aplicam tratamento de encoding.
 
 - As colunas foram normalizadas para Caixa Alta(**UPPER**) antes do processamento para evitar divergências de nomes.
 
@@ -69,7 +69,7 @@ Foram inseridas capturas básicas de eventos.log no script para casos de auditor
 
 **Caso 5 - Validação de Dígitos Verificadores do CNPJ**
 **Tratativa:** Sinalização e Auditoria
-    - Decidi não descartar registros com CPNJ inválidos para não deturpar os valores de despesas totais e média trimestral. Em vez disso, o script gera colunas boleanas para dizer se o cnpj é valido ou nao e exporta as falhas para auditoria, o que permite rastreabilidade sem perder dados financeiros.
+    - Decidi não descartar registros com CPNJ inválidos para não deturpar os valores de despesas totais e média trimestral. Em vez disso, o script gera colunas boleanas para dizer se o cnpj é válido ou não e exporta as falhas para auditoria, o que permite rastreabilidade sem perder dados financeiros.
 
 **2.5 - Análises**
 
