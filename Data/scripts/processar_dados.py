@@ -36,6 +36,9 @@ def processar_dados():
         if not os.path.isdir(ano_path):
             continue
 
+        processed_ano_dir = os.path.join(PROC_DIR, ano)
+        os.makedirs(processed_ano_dir, exist_ok=True)
+
         for nome_arquivo in os.listdir(ano_path):
             arquivo_path = os.path.join(ano_path, nome_arquivo)
 
