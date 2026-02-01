@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:15
+    container_name: pg_medallion
+    restart: unless-stopped
+
+    # Carrega POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB e as senhas
+    # API_PASSWORD/ETL_PASSWORD/BI_PASSWORD diretamente do .env
+    env_file:
+      - .env
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+      # Scripts de init (.sql e .sh). Só rodam na primeira inicialização do volume.
+      - ./Back-end/SQL/init:/docker-entrypoint-initdb.d:ro
+
+      # Dados para COPY FROM dentro do container (ajuste se seu 04_import.sql usa outro path)
+      - ./Data:/data:ro
+
+    healthcheck:
+      # $$ garante que quem expande é o shell no container (não o docker compose)
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  pgdata:

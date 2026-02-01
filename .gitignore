@@ -6,7 +6,7 @@ Data/logs/
 # Logs em geral
 *.log
 **/logs/
-
+.env
 # Arquivos temporários
 *.zip
 __pycache__/

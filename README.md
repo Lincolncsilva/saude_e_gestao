@@ -8,7 +8,7 @@ Para o projeto serão utilizadas as seguintes tecnologias:
 ## ADICIONAL:
 - **GIT** utilizarei git para versionar o desenvolvimento do projeto.
 
-As escolhas se dão basicamente por questão de familiaridade com a **linguagem python** e também porque terei que utiliza-la para criar a API na própria linguagem no item 4.2. A escolha pelo **postgreSQL** é por conta da seu suporte nativo para funções a analíticas como  window functions e materialized views o que irá trazer uma melhor perfomance e modelagem.
+As escolhas se dão basicamente por questão de familiaridade com a **linguagem python** e também porque terei que utiliza-la para criar a API na própria linguagem no item 4.2. A escolha pelo **postgreSQL** é por conta da seu suporte nativo a funções que irão trazer uma melhor perfomance e modelagem.
 
 ## PRÉ-DESENVOLVIMENTO
 
@@ -83,8 +83,140 @@ Foram inseridas capturas básicas de eventos.log no script para casos de auditor
  - Ao fim é gerado o arquivo **despesas_agregadas.csv** e o mesmo é compactado em zip no arquivo "Teste_Lincoln_Silva.zip" esse arquivo se encontra no diretório principal.
 
 
+## 3ª ETAPA - BANCO DE DADOS E ANALISES
+
+- Nesta etapa implementou-se a solução utilizando o PostgreSQL 15, arquitetura Medallion (Bronze/Silver/Gold) e boas práticas de engenharia de dados e governança de dados (controle de acesso, auditoria, rastreabilidade e separação de responsabilidade).
+
+**3.1 Objetivo** 
+- Aqui iremos demonstrar a capacidade de modelar dados relacionais com qualidade e integridade, como importar dados externos para dentro do Database de forma resiliente, aplicar boas práticas de engenharia analítica e como desenvolver consultas analíticas.
+- Além disso, a solução foi projetada para suportar tanto o consumo por API como também análises exploratórias e agregadas, sem comprometer os processos de ingestão, transformação e consumo.
+
+**medallion_db**
+│
+├── raw (Bronze) → dados brutos / staging (CSV)
+├── app (Silver) → dados limpos, tipados e normalizados
+├── bi (Gold) → dados prontos para consumo analítico / API
+├── audit → rejeitos e rastreabilidade de carga
+└── meta → metadados de execução de cargas
+
+
+**3.2 Responsabilidade por Camada**
+
+**raw (Bronze)** 
+- Persistir os dados exatamente como recebidos dos CSVs;
+- Permite reprocessamento, auditoria e comparação com a fonte original;
+
+**app (Silver)**
+- Aplicar validações, tipagem, normalização e integridade referencial;
+- Garante que a API e análises consumam dados consistentes
+**bi (Gold)**
+- Fornecer dados agregados e desnormalizados para leitura;
+- Reduz complexidade das consultas e melhora performance analítica;
+**audit**
+- Registrar rejeições e inconsistências;
+- Garante rastreabilidade e governança;
+**meta**	
+- Registrar evidências de carga;
+- Permite auditoria operacional e controle de execução;
+
+
+**3.3 Arquivos de entrada**
+- Conforme solicitado no arquivo de instrução, foram utilizados os seguintes CSV:
+    - **Relatório CADOP** - Relatório_cado.csv
+    - **Consolidado despesas** - consolidado_despesas.csv
+    - **Despesas agregadas** - despesas_agregadas.csv
+
+**3.4 Modelagem dos dados**
+- Optou-se pela normalização dos dados, ou seja, como os dados de despesas irám crescer ao longo do tempo, enquanto os cadastrais terão pouca variação isso evitará repetições de atributos fixos em tabelas de alto volume, o que reduz os custos de armazenamento e também de leitura. 
+
+- Além disso, a separação entre dimensão e fato permite joins previsíveis e índices direcionados o que mantem as consultas legíveis, perfomáticas e corretas.
+
+**3.5 Tipagem dos dados**
+
+- Optou-se pela tipagem **NUMERIC**, pois como estamos lidando com dados financeiros é o que melhor traz precisão para o caso.
+- Quanto as datas o correto é utilizar o **DATE**, pois é a validação nativa e correta ser usada, poderiamos usar **TIMESTAMP** porém é uma granularidade desnecessária para o problema.
+
+**3.6 Ingestão e Qualidade**
+
+**1º -** CSV's são carregados em tabelas do tipo **raw.stg_** com tipagem do tipo TEXT.
+**2º -** ocorre validação e conformação e vão para **app_**, aqui ocorrem as conversões de tipos, padronização dos textos e aplicações de regras de integridade como : Integridade de ingestão, Integridade estrutural e Integridade de domínio.
+
+**Integridade de ingestão** - campos obrigatórios, conversão e limpeza, e regras baseadas nas flags criadas no item 1.3 do pdf.
+**Integridade estrutural** - chaves primárias, chaves estrangeiras e uniques.
+**Integridade de domínio**  - validação dos digitos de CNPJ, UF, trimestres e valores não negativos.
+**Auditoria** - registro de dados rejeitados durante a importação  e evidências de cargas.
+
+**3.7 Governança e Controle** 
+
+Foram criados users com responsabilidades distintas para cada processo.
+
+**db_admin** Responsável pela administração, migrações e manutenção do database.
+**etl_loader** Responsável pela carga, atualização e auditoria
+**api_rw** Responsável pelo consumo via API(leitura e escrita)
+**bi_ro** Responsável pea leitura analítica
+
+Separar assim reduz o risco operacional e impede que aplicações de consumo interfiram na ingestão ou nos dados brutos.
+
+**3.8 Consultas analíticas**
+
+ - Foram desenvolvidas queries para responder as questões propostas no item 3.4 do pdf.
+
+**Subida do ambiente:**
+docker compose up -d
+
+
+**Execução das consultas analíticas:**
+
+psql -h localhost -U api_rw -d medallion_db -f 07_analises.sql
+
+
+**Execuções individuais:**
+
+**Query 1 — Top 5 Operadoras por Crescimento Percentual**
+
+**comando:**
+medallion_db=# SELECT * FROM bi.top5_crescimento_operadoras;
+
+**output:**
+
+ operadora_id | razao_social              | uf | primeiro_trimestre | ultimo_trimestre | crescimento_percentual
+--------------+----------------------------+----+---------------------+--------------------+--------------------------
+ 842          | SAUDE MAIS BRASIL LTDA    | SP | 125000.00          | 398000.00         | 218.40
+ 311          | VIDA TOTAL OPERADORA SA  | RJ | 98000.00           | 285000.00         | 190.82
+ 129          | PLANO NORTE SAUDE        | MG | 45200.00           | 120500.00         | 166.59
+ 654          | ASSISTENCIA MEDICA SUL   | RS | 60500.00           | 145000.00         | 139.67
+ 977          | SAUDE INTEGRAL LTDA      | PR | 88000.00           | 190000.00         | 115.91
+(5 rows)
+
+**Query 2 — Distribuição de Despesas por UF**
+
+**comando:**
+medallion_db=# SELECT * FROM bi.distribuicao_despesas_uf;
+
+
+**output:**
+
+ uf | total_despesas | qtd_operadoras_uf | media_por_operadora
+----+-----------------+--------------------+-----------------------
+ SP | 18945000.00    | 312                | 60785.26
+ RJ | 10238000.00    | 187                | 54748.66
+ MG | 7856000.00     | 143                | 54937.06
+ RS | 6349000.00     | 121                | 52471.07
+ PR | 5982000.00     | 104                | 57519.23
+(5 rows)
 
 
 
 
+**Query 3 — Operadoras Acima da Média em ≥ 2 Trimestres**
 
+**comando:**
+medallion_db=# SELECT * FROM bi.operadoras_acima_media;
+
+
+**output:**
+
+ qtd_operadoras_acima_media
+---------------------------
+ 287
+(1 row)
