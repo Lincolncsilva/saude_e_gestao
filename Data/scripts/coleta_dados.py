@@ -12,6 +12,11 @@ os.makedirs("./Data/logs", exist_ok = True)
 RAW_DIR ="./Data/raw"
 LOG_FILE ="./Data/logs/pipeline.log"
 URL_BASE = "https://dadosabertos.ans.gov.br/FTP/PDA/demonstracoes_contabeis/"
+DATA_FILE = f"{RAW_DIR}/d_file.txt"
+
+# Garantindo a existência do d_file.txt
+os.makedirs(RAW_DIR, exist_ok=True)
+open(DATA_FILE, "a").close
 
 # Ano anterior e ano vigente para automatizar o dowload
 ANO_ANTERIOR = datetime.now().year -1
@@ -38,26 +43,33 @@ def evento_log(tipo, evento, nome_arquivo, detalhe=""):
 
 def Dowload_arquivos():
     for t in tri: 
-        try:            
+        try: 
+
+                      
             if datetime.now().month < 6:
                 os.makedirs(f"{RAW_DIR}/{ANO_ANTERIOR}", exist_ok = True)
-
+                
                 url = f"{URL_BASE}/{ANO_ANTERIOR}/{t}{ANO_ANTERIOR}.zip"
-                r = requests.get(url)
+                r = requests.get(url, timeout=60)
                 r.raise_for_status()
 
                 r_content = BytesIO(r.content)
                 file = zipfile.ZipFile(r_content)
-                filename = url.split("/")[-1]
+                arquivo = url.split("/")[-1]
 
+                with open(DATA_FILE, "r") as c:
+                    baixados = set(line.strip() for line in c if line.strip())
+                if arquivo in baixados:
+                    continue
+                  
                 ## Log de download ano_anterior
-                evento_log("INFO","DOWNLOADED",filename, detalhe=f"SIZE={len(r.content)}")
+                evento_log("INFO","DOWNLOADED",arquivo, detalhe=f"SIZE={len(r.content)}")
                 
                 ## Extração do zip
                 file.extractall(f"{RAW_DIR}/{ANO_ANTERIOR}")
 
                 ## Log de extração do Zip ano_anterior
-                evento_log("INFO","EXTRACTED",filename, detalhe=f"DEST={RAW_DIR}/{ANO_ANTERIOR}")
+                evento_log("INFO","EXTRACTED",arquivo, detalhe=f"DEST={RAW_DIR}/{ANO_ANTERIOR}")
             
             else:
                 os.makedirs(f"{RAW_DIR}/{ANO_ATUAL}", exist_ok = True)
@@ -68,25 +80,28 @@ def Dowload_arquivos():
 
                 r_content = BytesIO(r.content)
                 file = zipfile.ZipFile(r_content)
-                filename = url.split("/")[-1]
+                arquivo = url.split("/")[-1]
 
                 ## Log de download Ano_atual
-                evento_log("INFO","DOWNLOADED",filename, detalhe=f"SIZE={len(r.content)}") 
+                evento_log("INFO","DOWNLOADED",arquivo, detalhe=f"SIZE={len(r.content)}") 
 
                 file.extractall(f"{RAW_DIR}/{ANO_ATUAL}")
 
                 ## Log de extração do zip ano_atual
-                evento_log("INFO","EXTRACTED",filename, detalhe=f"DEST={RAW_DIR}/{ANO_ATUAL}")
+                evento_log("INFO","EXTRACTED",arquivo, detalhe=f"DEST={RAW_DIR}/{ANO_ATUAL}")
+
+            with open(DATA_FILE, "a") as f:
+                f.write(f"{arquivo}\n")
 
         ## Logs em caso de erros de HTTP 
         except requests.exceptions.HTTPError as e:
-            filename = url.split("/")[-1]
-            evento_log("WARN","HTTP_ERROR",filename, detalhe= str(e))
+            arquivo = url.split("/")[-1]
+            evento_log("WARN","HTTP_ERROR",arquivo, detalhe= str(e))
             
                 
         ## Logs em caso de zip com problemas
         except zipfile.BadZipFile as e:
-            filename = url.split("/")[-1]
-            evento_log("WARN","BAD_ZIP",filename, detalhe=f"SIZE={len(r.content)}")
+            arquivo = url.split("/")[-1]
+            evento_log("WARN","BAD_ZIP",arquivo, detalhe=f"SIZE={len(r.content)}")
            
 if __name__ == "__main__": Dowload_arquivos()
