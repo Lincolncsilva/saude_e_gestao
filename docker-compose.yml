@@ -9,7 +9,8 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./backend/SQL/init:/docker-entrypoint-initdb.d:ro
+      # 01_schemas, 02_roles e 03_grant_roles rodam no boot
+      - ./backend/SQL/init:/docker-entrypoint-initdb.d:ro 
       - ./Data:/data:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
@@ -50,12 +51,15 @@ services:
         condition: service_completed_successfully
     volumes:
       - ./Data:/data:ro
-      - ./backend/SQL/init:/sql:ro
-    entrypoint: ["/bin/bash", "-lc"]
+      - ./backend/SQL:/sql:ro
     command: >
+      bash -c "
       set -e;
-      export PGPASSWORD="$$POSTGRES_PASSWORD";
-      psql -h db -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /sql/01_import_raw.sql;
+      export PGPASSWORD=$$POSTGRES_PASSWORD;
+      echo 'Criando tabelas RAW e importando CSV...';
+      psql -h db -U $$POSTGRES_USER -d $$POSTGRES_DB -v ON_ERROR_STOP=1 -f /sql/raw/01_tabelas_raw.sql;
+      psql -h db -U $$POSTGRES_USER -d $$POSTGRES_DB -v ON_ERROR_STOP=1 -f /sql/load/01_importacao_raw.sql;
+      "
 
   postload:
     image: postgres:15
@@ -67,31 +71,17 @@ services:
       import_raw:
         condition: service_completed_successfully
     volumes:
-      - ./backend/SQL/init:/sql:ro
-    entrypoint: ["/bin/bash", "-lc"]
+      - ./backend/SQL:/sql:ro
     command: >
+      bash -c "
       set -e;
-      export PGPASSWORD="$$POSTGRES_PASSWORD";
-      psql -h db -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /sql/06_tabelas_app.sql;
-      psql -h db -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /sql/08_tabelas_meta.sql;
-      psql -h db -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /sql/09_analises.sql;
-
-  load_app:
-    image: postgres:15
-    container_name: load_app_medallion
-    restart: "no"
-    env_file:
-      - .env
-    depends_on:
-      postload:
-        condition: service_completed_successfully
-    volumes:
-      - ./backend/SQL/init:/sql:ro
-    entrypoint: ["/bin/bash", "-lc"]
-    command: >
-      set -e;
-      export PGPASSWORD="$$POSTGRES_PASSWORD";
-      psql -h db -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /sql/02_load_app.sql;
+      export PGPASSWORD=$$POSTGRES_PASSWORD;
+      echo 'Criando Silver (APP), Meta e executando Analises...';
+      psql -h db -U $$POSTGRES_USER -d $$POSTGRES_DB -v ON_ERROR_STOP=1 -f /sql/silver/01_tabelas_app.sql;
+      psql -h db -U $$POSTGRES_USER -d $$POSTGRES_DB -v ON_ERROR_STOP=1 -f /sql/01_tabelas_meta.sql;
+      psql -h db -U $$POSTGRES_USER -d $$POSTGRES_DB -v ON_ERROR_STOP=1 -f /sql/load/02_importacao_app.sql;
+      psql -h db -U $$POSTGRES_USER -d $$POSTGRES_DB -v ON_ERROR_STOP=1 -f /sql/load/03_analises.sql;
+      "
 
   api:
     build:
@@ -106,7 +96,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      load_app:
+      postload:
         condition: service_completed_successfully
     volumes:
       - .:/app
