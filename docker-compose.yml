@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15
@@ -11,9 +9,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      # Scripts de estrutura inicial (DDL)
-      - ./Back-end/SQL/init:/docker-entrypoint-initdb.d:ro
-      # Dados para COPY (acesso direto do Postgres)
+      - ./backend/SQL/init:/docker-entrypoint-initdb.d:ro
       - ./Data:/data:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
@@ -34,12 +30,16 @@ services:
       db:
         condition: service_healthy
     volumes:
+      - .:/app
       - ./Data:/app/Data
+    environment:
+      PYTHONPATH: /app:/app/Data/scripts
+    working_dir: /app
     command: ["python", "main.py"]
 
-  importer:
+  import_raw:
     image: postgres:15
-    container_name: importer_medallion
+    container_name: import_raw_medallion
     restart: "no"
     env_file:
       - .env
@@ -50,12 +50,12 @@ services:
         condition: service_completed_successfully
     volumes:
       - ./Data:/data:ro
-      - ./Back-end/SQL/importacao:/sql:ro
+      - ./backend/SQL/init:/sql:ro
     entrypoint: ["/bin/bash", "-lc"]
     command: >
-      PGPASSWORD="$$POSTGRES_PASSWORD"
-      psql -h db -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1
-      -f /sql/01_importacao.sql
+      set -e;
+      export PGPASSWORD="$$POSTGRES_PASSWORD";
+      psql -h db -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /sql/01_import_raw.sql;
 
   postload:
     image: postgres:15
@@ -64,17 +64,56 @@ services:
     env_file:
       - .env
     depends_on:
-      importer:
+      import_raw:
         condition: service_completed_successfully
     volumes:
-      - ./Back-end/SQL/tabelas:/sql:ro
-    entrypoint: ["/bin/bash","-lc"]
+      - ./backend/SQL/init:/sql:ro
+    entrypoint: ["/bin/bash", "-lc"]
     command: >
-      PGPASSWORD="$$POSTGRES_PASSWORD"
-      psql -h db -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1
-      -f /sql/02_tabelas_app.sql 
-      -f /sql/03_tabelas_meta.sql 
-      -f /sql/04_analises.sql
+      set -e;
+      export PGPASSWORD="$$POSTGRES_PASSWORD";
+      psql -h db -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /sql/06_tabelas_app.sql;
+      psql -h db -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /sql/08_tabelas_meta.sql;
+      psql -h db -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /sql/09_analises.sql;
+
+  load_app:
+    image: postgres:15
+    container_name: load_app_medallion
+    restart: "no"
+    env_file:
+      - .env
+    depends_on:
+      postload:
+        condition: service_completed_successfully
+    volumes:
+      - ./backend/SQL/init:/sql:ro
+    entrypoint: ["/bin/bash", "-lc"]
+    command: >
+      set -e;
+      export PGPASSWORD="$$POSTGRES_PASSWORD";
+      psql -h db -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -f /sql/02_load_app.sql;
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api_medallion
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      load_app:
+        condition: service_completed_successfully
+    volumes:
+      - .:/app
+    environment:
+      PYTHONPATH: /app
+    working_dir: /app
+    command: ["python", "-m", "uvicorn", "backend.API.api:app", "--host", "0.0.0.0", "--port", "8000"]
 
 volumes:
   pgdata:
