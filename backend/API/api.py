@@ -23,6 +23,9 @@ def listar_operadoras(
     limit: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
+    # 1. Calculamos o total antes de aplicar o limite (essencial para o meta)
+    total_registros = db.query(Operadora).count()
+    
     skip = (page - 1) * limit
     operadoras = (
         db.query(Operadora)
@@ -31,6 +34,22 @@ def listar_operadoras(
         .limit(limit)
         .all()
     )
+
+    # 2. Calculamos o total de páginas
+    total_paginas = (total_registros + limit - 1) // limit
+
+    # 3. Retornamos o dicionário (o "envelope")
+    return {
+        "data": operadoras,
+        "meta": {
+            "total": total_registros,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_paginas
+        }
+    }
+
+    
     return operadoras
 
 # --- 2. DETALHES DE UMA OPERADORA ESPECÍFICA ---
