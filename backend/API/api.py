@@ -6,8 +6,8 @@ from backend.API.modelos import Operadoras as Operadora
 from backend.API.modelos import DespesasConsolidadas as DespesaConsolidada
 from backend.API.modelos import DespesasAgregadas as DespesaAgregada
 from backend.API.schemas import EstatisticaResponse, DespesaIndividual, OperadoraCNPJSchema
-from typing import List, Optional
-from sqlalchemy import or_, cast, String, exists
+from typing import List, Optional, Dict
+from sqlalchemy import or_, cast, String, exists, and_, func, desc
 import re
 
 app = FastAPI(title="ANS Data API")
@@ -34,11 +34,19 @@ def listar_operadoras(
 
     # ✅ filtro: só operadoras que existem na tabela de despesas
     if has_despesas:
-        query = query.filter(
-            exists().where(DespesaConsolidada.operadora_id == Operadora.operadora_id)
+        despesas_exists = (
+            db.query(DespesaConsolidada.operadora_id)
+            .filter(
+                and_(
+                    DespesaConsolidada.operadora_id == Operadora.operadora_id,
+                    DespesaConsolidada.valor_despesas > 0
+                )
+            )
+            .correlate(Operadora)   # ✅ força correlação com Operadora
+            .exists()
         )
+        query = query.filter(despesas_exists)  # ← MOVER PARA DENTRO DO IF
 
-    # (seu filtro por q continua igual)
     if q:
         query = query.filter(
             or_(
@@ -114,14 +122,66 @@ def obter_estatisticas(db: Session = Depends(get_db)):
 
 @app.get("/api/estatisticas/uf")
 def despesas_por_uf(db: Session = Depends(get_db)):
-    # Agrupa por UF e soma as despesas
-    # Nota: Assumindo que a tabela Operadora tem 'uf' e a Despesa tem 'valor'
-    # Se os nomes forem diferentes no seu modelo, ajuste aqui
-    resultados = (
-        db.query(Operadora.uf, func.sum(DespesaConsolidada.valor).label("total"))
-        .join(DespesaConsolidada, Operadora.operadora_id == DespesaConsolidada.operadora_id)
+    # Soma das despesas por UF (somando todas as operadoras)
+    rows = (
+        db.query(
+            Operadora.uf.label("uf"),
+            func.coalesce(func.sum(DespesaConsolidada.valor_despesas), 0).label("total")
+        )
+        .join(DespesaConsolidada, DespesaConsolidada.operadora_id == Operadora.operadora_id)
+        .filter(Operadora.uf.isnot(None))
         .group_by(Operadora.uf)
         .all()
     )
-    
-    return [{"uf": r.uf, "total": float(r.total)} for r in resultados]
+
+    return [{"uf": r.uf, "total": float(r.total or 0)} for r in rows]
+
+@app.get("/api/estatisticas/uf/{uf}")
+def detalhes_por_uf(uf: str, db: Session = Depends(get_db)):
+    uf = uf.strip().upper()
+    if len(uf) != 2:
+        raise HTTPException(status_code=400, detail="UF inválida")
+
+    # Total do estado - ADICIONE FILTRO valor_despesas > 0
+    total_uf = (
+        db.query(func.sum(DespesaConsolidada.valor_despesas))
+        .join(Operadora, Operadora.operadora_id == DespesaConsolidada.operadora_id)
+        .filter(
+            Operadora.uf == uf,
+            DespesaConsolidada.valor_despesas > 0  # ← AQUI
+        )
+        .scalar()
+    ) or 0
+
+    # Top 5 operadoras por gasto no estado
+    top5 = (
+        db.query(
+            Operadora.operadora_id,
+            Operadora.razao_social,
+            Operadora.cnpj,
+            func.sum(DespesaConsolidada.valor_despesas).label("total")
+        )
+        .join(DespesaConsolidada, DespesaConsolidada.operadora_id == Operadora.operadora_id)
+        .filter(
+            Operadora.uf == uf,
+            DespesaConsolidada.valor_despesas > 0  # ← AQUI
+        )
+        .group_by(Operadora.operadora_id, Operadora.razao_social, Operadora.cnpj)
+        .order_by(desc(func.sum(DespesaConsolidada.valor_despesas)))  # ← CORRIGIDO
+        .limit(5)
+        .all()
+    )
+
+    return {
+        "uf": uf,
+        "total_uf": float(total_uf),
+        "top5": [
+            {
+                "operadora_id": r.operadora_id,
+                "razao_social": r.razao_social,
+                "cnpj": r.cnpj,
+                "total": float(r.total or 0),
+            }
+            for r in top5
+        ],
+    }

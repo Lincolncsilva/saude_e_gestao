@@ -48,6 +48,8 @@ CREATE TABLE app.operadoras (
 -- Indexação para performance nos JOINs e buscas
 CREATE INDEX operadoras_uf_idx ON app.operadoras (uf);
 CREATE INDEX operadoras_razao_idx ON app.operadoras USING btree (razao_social);
+CREATE INDEX IF NOT EXISTS despesas_operadora_idx ON app.despesa_consolidada (operadora_id);
+
 
 -- =========================
 -- FACT: despesas_consolidadas
