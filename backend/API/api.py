@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, Depends
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from backend.API.db import get_db
@@ -6,7 +6,10 @@ from backend.API.modelos import Operadoras as Operadora
 from backend.API.modelos import DespesasConsolidadas as DespesaConsolidada
 from backend.API.modelos import DespesasAgregadas as DespesaAgregada
 from backend.API.schemas import EstatisticaResponse, DespesaIndividual, OperadoraCNPJSchema
-from typing import List
+from typing import List, Optional
+from sqlalchemy import or_, cast, String, exists
+import re
+
 app = FastAPI(title="ANS Data API")
 
 app.add_middleware(
@@ -17,40 +20,54 @@ app.add_middleware(
 )
 
 # --- 1. LISTA OPERADORAS COM PAGINAÇÃO ---
+
+
 @app.get("/api/operadoras")
 def listar_operadoras(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
+    q: str = Query(None),
+    has_despesas: bool = Query(False),
     db: Session = Depends(get_db),
 ):
-    # 1. Calculamos o total antes de aplicar o limite (essencial para o meta)
-    total_registros = db.query(Operadora).count()
-    
+    query = db.query(Operadora)
+
+    # ✅ filtro: só operadoras que existem na tabela de despesas
+    if has_despesas:
+        query = query.filter(
+            exists().where(DespesaConsolidada.operadora_id == Operadora.operadora_id)
+        )
+
+    # (seu filtro por q continua igual)
+    if q:
+        query = query.filter(
+            or_(
+                Operadora.razao_social.ilike(f"%{q}%"),
+                Operadora.cnpj.like(f"%{q}%")
+            )
+        )
+
+    total_registros = query.count()
+
     skip = (page - 1) * limit
     operadoras = (
-        db.query(Operadora)
-        .order_by(Operadora.operadora_id.asc())
+        query.order_by(Operadora.razao_social.asc())
         .offset(skip)
         .limit(limit)
         .all()
     )
 
-    # 2. Calculamos o total de páginas
-    total_paginas = (total_registros + limit - 1) // limit
+    total_paginas = (total_registros + limit - 1) // limit if total_registros > 0 else 1
 
-    # 3. Retornamos o dicionário (o "envelope")
     return {
         "data": operadoras,
         "meta": {
             "total": total_registros,
             "page": page,
             "limit": limit,
-            "total_pages": total_paginas
-        }
+            "total_pages": total_paginas,
+        },
     }
-
-    
-    return operadoras
 
 # --- 2. DETALHES DE UMA OPERADORA ESPECÍFICA ---
 @app.get("/api/operadoras/{cnpj}", response_model=OperadoraCNPJSchema)
@@ -77,8 +94,8 @@ def historico_despesas(
         db.query(DespesaConsolidada)
         .filter(DespesaConsolidada.operadora_id == operadora.operadora_id)
         .order_by(
-            DespesaConsolidada.ano.desc(),
-            DespesaConsolidada.trimestre.desc(),
+            DespesaConsolidada.ano.asc(),
+            DespesaConsolidada.trimestre.asc(),
         )
         .all()
     )
@@ -93,3 +110,18 @@ def obter_estatisticas(db: Session = Depends(get_db)):
         .order_by(DespesaAgregada.total_despesas.desc()).limit(5).all()
     )
     return stats
+
+
+@app.get("/api/estatisticas/uf")
+def despesas_por_uf(db: Session = Depends(get_db)):
+    # Agrupa por UF e soma as despesas
+    # Nota: Assumindo que a tabela Operadora tem 'uf' e a Despesa tem 'valor'
+    # Se os nomes forem diferentes no seu modelo, ajuste aqui
+    resultados = (
+        db.query(Operadora.uf, func.sum(DespesaConsolidada.valor).label("total"))
+        .join(DespesaConsolidada, Operadora.operadora_id == DespesaConsolidada.operadora_id)
+        .group_by(Operadora.uf)
+        .all()
+    )
+    
+    return [{"uf": r.uf, "total": float(r.total)} for r in resultados]
