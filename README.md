@@ -1,22 +1,67 @@
-# TESTE DE ENTRADA PARA ESTAGIÁRIO V2.0
+# PROJETO SAUDE E GESTAO
 
-## STACK UTILIZADA
-Para o projeto serão utilizadas as seguintes tecnologias:
-- **Python** para as tarefas de programação;
-- **PostgreSQL** para banco de dados;
+## 🛠️ Stack Tecnológica
 
-## ADICIONAL:
-- **GIT** utilizarei git para versionar o desenvolvimento do projeto.
+### Backend
 
-As escolhas se dão basicamente por questão de familiaridade com a **linguagem python** e também porque terei que utiliza-la para criar a API na própria linguagem no item 4.2. A escolha pelo **postgreSQL** é por conta da seu suporte nativo a funções que irão trazer uma melhor perfomance e modelagem.
+* **Python 3.11**
+* **FastAPI**
+* **SQLAlchemy**
+* **PostgreSQL 15**
 
-## PRÉ-DESENVOLVIMENTO
+### Frontend
 
-Nesse momento foi criado o diretório raiz conforme solicitado nas instruções como o nome **Teste_Lincoln_Silva** em seguida dentro foi criado um diretório para **Front-end**, **Back-end** e **Dados**. Essa é a estrutura básica que sofrerá atualizações ao longo do projeto.
+* **Vue 3 (Composition API)**
+* **Vite**
+* **Pinia**
+* **ECharts / vue-echarts**
+* **Axios**
 
-## DESENVOLVIMENTO
+### Infra
 
-# 1ª ETAPA - Coleta dos dados na API 
+* **Docker**
+* **Docker Compose**
+
+### Versionamento
+
+* **GIT/GITHUB**
+
+## 📁 Estrutura do Projeto
+
+```
+.
+├── backend
+│   ├── API
+│   └── SQL
+├── Data
+│   ├── logs
+│   ├── processed
+│   ├── raw
+│   ├── references
+│   └── scripts
+├── docker-compose.yml
+├── Dockerfile
+├── docs
+│   └── Saude_e_Gestao.postman_collection.json
+├── frontend
+│   ├── Dockerfile
+│   ├── index.html
+│   ├── nginx.conf
+│   ├── node_modules
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── public
+│   ├── README.md
+│   ├── src
+│   └── vite.config.js
+├── main.py
+├── README.md
+└── requirements.txt
+```
+
+# DESENVOLVIMENTO - ENGENHARIA DE DADOS
+
+## 1ª ETAPA - Coleta dos dados na API 
 
 O primeiro passo a ser dado é analisar a API e o meio mais eficiente de realizar a coleta das informações. No caso em concreto optei por utilizar como **url_base** "https://dadosabertos.ans.gov.br/FTP/PDA/demonstracoes_contabeis/".
 
@@ -25,7 +70,7 @@ Com a **url_base** definida criamos o script **coleta_dados.py** que se encontra
 Foram inseridas capturas básicas de eventos.log no script para casos de auditoria como por exemplo, **quando foi realizado o download, o nome do arquivo, seu tamanho original, para que diretório foi extraído**, além de **registro de erros http e também de arquivos baixados corrompidos**.
 
 
-# 2ª ETAPA . Processamento de Dados e Análises
+## 2ª ETAPA . Processamento de Dados e Análises
 
 ```2.1 - Identificação e extração automática dos dados```
 
@@ -95,7 +140,7 @@ Foram inseridas capturas básicas de eventos.log no script para casos de auditor
  - Ao fim é gerado o arquivo **despesas_agregadas.csv** e o mesmo é compactado em zip no arquivo "Teste_Lincoln_Silva.zip" esse arquivo se encontra no diretório principal.
 
 
-# 3ª ETAPA - BANCO DE DADOS E ANALISES
+## 3ª ETAPA - BANCO DE DADOS E ANALISES
 
 - Nesta etapa implementou-se a solução utilizando o PostgreSQL 15, arquitetura Medallion (Bronze/Silver/Gold) e boas práticas de engenharia de dados e governança de dados (controle de acesso, auditoria, rastreabilidade e separação de responsabilidade).
 
@@ -103,39 +148,29 @@ Foram inseridas capturas básicas de eventos.log no script para casos de auditor
 - Aqui iremos demonstrar a capacidade de modelar dados relacionais com qualidade e integridade, como importar dados externos para dentro do Database de forma resiliente, aplicar boas práticas de engenharia analítica e como desenvolver consultas analíticas.
 - Além disso, a solução foi projetada para suportar tanto o consumo por API como também análises exploratórias e agregadas, sem comprometer os processos de ingestão, transformação e consumo.
 
-## medallion_db
+## 📌 Visão Geral da Arquitetura
 
-```bash
-│
-├── raw (Bronze) → dados brutos / staging (CSV)
-├── app (Silver) → dados limpos, tipados e normalizados
-├── bi (Gold) → dados prontos para consumo analítico / API
-├── audit → rejeitos e rastreabilidade de carga
-└── meta → metadados de execução de cargas
+```
+[CSV / Dados Brutos]
+        ↓
+   Pipeline (Python)
+        ↓
+   PostgreSQL (RAW)
+        ↓
+   PostgreSQL (SILVER / APP)
+        ↓
+   API (FastAPI)
+        ↓
+   Frontend (Vue + Vite)
 ```
 
-**3.2 Responsabilidade por Camada**
+### Camadas:
 
-```raw (Bronze)``` 
-- Persistir os dados exatamente como recebidos dos CSVs;
-- Permite reprocessamento, auditoria e comparação com a fonte original;
-
-```app (Silver)```
-- Aplicar validações, tipagem, normalização e integridade referencial;
-- Garante que a API e análises consumam dados consistentes
-
-```bi (Gold)```
-- Fornecer dados agregados e desnormalizados para leitura;
-- Reduz complexidade das consultas e melhora performance analítica;
-
-```audit```
-- Registrar rejeições e inconsistências;
-- Garante rastreabilidade e governança;
-
-```meta```	
-- Registrar evidências de carga;
-- Permite auditoria operacional e controle de execução;
-
+* **RAW** → Dados brutos importados
+* **SILVER / APP** → Dados tratados e normalizados
+* **GOLD / BI** → Dados prontos para serem consumidos por BI (Opicional)
+* **API** → Exposição dos dados via endpoints REST
+* **Frontend** → Visualização interativa (tabela, mapas, rankings e gráficos)
 
 ## 3.3 - Arquivos de entrada
 - Conforme solicitado no arquivo de instrução, foram utilizados os seguintes CSV:
@@ -146,7 +181,7 @@ Foram inseridas capturas básicas de eventos.log no script para casos de auditor
 ## 3.4 - Modelagem dos dados
 - Optou-se pela normalização dos dados, ou seja, como os dados de despesas irám crescer ao longo do tempo, enquanto os cadastrais terão pouca variação isso evitará repetições de atributos fixos em tabelas de alto volume, o que reduz os custos de armazenamento e também de leitura. 
 
-- Além disso, a separação entre dimensão e fato permite joins previsíveis e índices direcionados o que mantem as consultas legíveis, perfomáticas e corretas.
+- Além disso, a separação entre dimensão e fato permite joins previsíveis e índices direcionados o que mantem as consultas legíveis, perfomáticas e corretas. 
 
 ## 3.5 - Tipagem dos dados
 
@@ -185,10 +220,6 @@ Separar assim reduz o risco operacional e impede que aplicações de consumo int
 
  - Foram desenvolvidas queries para responder as questões propostas no item 3.4 do pdf.
 
-### Subida do ambiente
-```bash
-docker compose up -d
-```
 
 ### Execução das consultas analíticas
 ```bash
@@ -198,6 +229,11 @@ psql -h localhost -U api_rw -d medallion_db -f 07_analises.sql
 ### Execuções individuais
 
 ```Query 1—```  **Top 5 Operadoras por Crescimento Percentual**
+
+**Desafio:**
+``` 
+R: Para as operadoras que não possuem dados em pelomenos 2 trimestres foram retiradas e serão contempladas quando possuirem mais informação.
+```  
 
 **comando:**
 ```psql
@@ -239,9 +275,47 @@ medallion_db=# SELECT * FROM bi.distribuicao_despesas_uf;
 
 ```Query 3—``` **Operadoras Acima da Média em ≥ 2 Trimestres**
 
+**Desafio:**
+``` 
+R: Foi utilizada CTEs com FILTER e COUNT condicional, combinando:
+
+1 - CTE media_tri: Calcula a média de despesas por trimestre
+
+2 - CTE acima_media: Para cada operadora, conta quantos trimestres estão acima da média
+
+3 - Consulta final: Conta operadoras com ≥ 2 trimestres acima da média
+
+```  
+
 **comando:**
 ```psql
 medallion_db=# SELECT * FROM bi.operadoras_acima_media;
+```
+```sql
+media_tri AS (
+  SELECT
+    ano,
+    trimestre,
+    AVG(valor_operadora) AS media_trimestre
+  FROM operadora_tri
+  GROUP BY ano, trimestre
+),
+acima_media AS (
+  SELECT
+    o.operadora_id,
+    COUNT(*) FILTER (
+      WHERE o.valor_operadora > m.media_trimestre
+    ) AS qtd_trimestres_acima
+  FROM operadora_tri o
+  JOIN media_tri m
+    ON m.ano = o.ano
+   AND m.trimestre = o.trimestre
+  GROUP BY o.operadora_id
+)
+SELECT
+  COUNT(*) AS operadoras_acima_em_pelo_menos_2_trimestres
+FROM acima_media
+WHERE qtd_trimestres_acima >= 2;
 ```
 
 **output:**
@@ -254,7 +328,19 @@ medallion_db=# SELECT * FROM bi.operadoras_acima_media;
 ```
 
 
-# 4ª ETAPA - API E INTERFACE WEB
+# 4ª ETAPA - API E INTERFACE WEB - FULLSTACK
+
+## 🧩 Funcionalidades
+
+### Backend / API
+
+* Listagem paginada de operadoras
+* Busca global por **Razão Social** ou **CNPJ**
+* Filtro: apenas operadoras com despesas
+* Histórico trimestral por operadora
+* Estatísticas nacionais por UF
+* Ranking Top 5 nacional
+* Ranking Top 5 por estado (UF)
 
 ## 4.1 parte técnica e respostas ao trade-offs
 
@@ -262,18 +348,16 @@ medallion_db=# SELECT * FROM bi.operadoras_acima_media;
 
  - Foi utilizada a estrátegia de paginação por **Offset-based** por ser mais intuitiva para o **frontend Vue.js** e também permite uma navegação direta para páginas específicas em componentes de tabela.
 
- - Nos **Cálculos** **Estátisticos** optou-se pela opção **pré-calculada** pois isso garante uma melhor perfomance independente do volume dos dados.
+ - Nos **Cálculos Estátisticos** optou-se pela opção **pré-calculada** pois isso garante uma melhor perfomance independente do volume dos dados.
 
  - **Estrutura de Resposta** optou-se por **Meta+Dados** ,ou seja, quando realizamos a chamada a API a mesma responde retornando o objeto **meta** com to tal de registros e páginas o que evitará que o frontend necessite fazer requisições extras de contagem para renderizar a paginação.
 
  ## 4.2 Endpoints (exemplos)
 
- **GET** ```/api/operadoras (page , limit)```
+### Lista de Operadoras
 
-**Request URL**
-
-```url
-http://localhost:8000/api/operadoras?page=1&limit=2
+```http
+GET /api/operadoras?page=1&limit=10&q=amil&has_despesas=true
 ```
 
  - **Resposta Esperada** ```(200 OK)```:
@@ -340,12 +424,10 @@ http://localhost:8000/api/operadoras?page=1&limit=2
 ```
 
 
-**GET** ```/api/operadoras/{cnpj}```
+### Detalhe da Operadora
 
-**Request URL**
-
-```url
-http://localhost:8000/api/operadoras/27452545000195
+```http
+GET /api/operadoras/{cnpj}
 ```
 
 - **Resposta Esperada** ```(200 OK)```:
@@ -376,12 +458,10 @@ http://localhost:8000/api/operadoras/27452545000195
 }
 ```
 
-**GET** ```/api/operadoras/{cnpj}/despesas```
+### Histórico de despesas por operadora
 
-**Request URL**
-
-```url
-http://localhost:8000/api/operadoras/27452545000195/despesas
+```http
+GET /api/operadoras/{cnpj}/despesas
 ```
 
 - **Resposta Esperada** ```(200 OK)```:
@@ -411,12 +491,10 @@ http://localhost:8000/api/operadoras/27452545000195/despesas
 ]
 ```
 
-**GET** ``` /api/estatisticas```
+### Estatísticas Nacionais - TOP 5 maiores despesas do país
 
-**Request URL**
-
-```url
-http://localhost:8000/api/estatisticas
+```http
+GET /api/estatisticas
 ```
 
 - **Resposta Esperada** ```(200 OK)```:
@@ -474,4 +552,262 @@ http://localhost:8000/api/estatisticas
   }
 ]
 ```
+### Mapa interativo - despesas/UF
+
+```http
+GET /api/estatisticas/uf
+```
+
+- **Resposta Esperada** ```(200 OK)```:
+```json
+[
+  {
+    "uf": "SC",
+    "total": 5313651681.77
+  },
+  {
+    "uf": "RS",
+    "total": 6353323934.91
+  },
+  {
+    "uf": "DF",
+    "total": 14974288439.09
+  },
+  {
+    "uf": "MG",
+    "total": 11075543815.71
+  },
+  {
+    "uf": "RN",
+    "total": 436679006.11
+  },
+  {
+    "uf": "SP",
+    "total": 80367805381.5
+  }
+]
+``` 
+
+### Top 5 por Estado
+
+```http
+GET /api/estatisticas/uf/{UF}
+```
+
+- **Resposta Esperada** ```(200 OK)```:
+```json
+{
+  "uf": "SC",
+  "total_uf": 5313651681.77,
+  "top5": [
+    {
+      "operadora_id": 856,
+      "razao_social": "UNIMED GRANDE FLORIANÓPOLIS-COOPERATIVA DE TRABALHO MEDICO",
+      "cnpj": "77858611000108",
+      "total": 973797633.6
+    },
+    {
+      "operadora_id": 840,
+      "razao_social": "UNIMED DO ESTADO DE SANTA CATARINA FED. EST. DAS COOP. MÉD.",
+      "cnpj": "76590884000143",
+      "total": 645875455.25
+    },
+    {
+      "operadora_id": 873,
+      "razao_social": "UNIMED LITORAL COOPERATIVA DE TRABALHO MÉDICO LTDA",
+      "cnpj": "85377174000120",
+      "total": 638027144.91
+    },
+    {
+      "operadora_id": 801,
+      "razao_social": "UNIMED DE JOINVILLE COOPERATIVA DE TRABALHO MÉDICO",
+      "cnpj": "82602327000106",
+      "total": 560041417.88
+    },
+    {
+      "operadora_id": 746,
+      "razao_social": "UNIMED BLUMENAU - COOPERATIVA DE TRABALHO MEDICO",
+      "cnpj": "82624776000147",
+      "total": 527965290.3
+    }
+  ]
+}
+``` 
+
+## 4.3 Interface Web
+
+### Trade-offs técnicos
+
+**Estratégia de Busca/Filtro**
+
+```Opção A``` - Busca no servidor - O volume alto de informação por conta de todas as operadoras iria aumentar o tempo de carregamento e uso de memória e não é escalável.
+
+**Gerenciamento de Estado**
+
+```Opção B``` - Vuex/Pinia - A aplicação tem estado compartilhado entre múltiplos componentes e páginas: lista paginada, meta de paginação, busca atual, toggle “somente com dados”, seleção de operadora, despesas, etc. O pinia irá fornecer ações assincronas, fluxos previsível e estado centralizado, isso vem acoplado a dependências e alguma estrutura extra mas reduz a complexidade conforme a aplicação cresce.
+
+**Performance da Tabela**
+
+- A estratégia adota foi a de paginação no lado do servidor e renderização limitada por páginas para evitar renderizar milhares de linhas ao mesmo tempo, deste modo a tabela fica mais rápida e estável, request menores. O usuário navega por página ao invés de scroll.
+
+
+**Tratamento de Erros e Loading**
+
+```Erros de rede/API``` - Centralizado no http.js, padronização do erro em um shape simplista **status**,**mensagem**, **raw** o que evita duplicar lógia de erro em cada componente e garante maior consistência.
+
+```Estados de Loading```- O store expõe a flag **loadingList**, **loadingStats**, etc. A UI utiliza componentes de estado (UIState) com orvelay o que melhora a experiência do usuário.
+
+```Dados Vazios``` - Quando a busca nao retorna resultados a tabela mostra o  contéudo vazio com mensagem específica **Nenhum resultado encontrado** em caso de falta de contexto mensagem genéricas como **"falha Inesperada"**, isso melhora a taxa de resolução do lado do cliente sem necessidade de logs.
+
+
+## 🧩 Funcionalidades
+
+### Frontend
+
+* Tabela paginada com:
+
+  * Busca server-side
+  * Seleção visual da linha
+  * Filtro "Somente com dados"
+* Mapa de calor do Brasil por despesas (UF)
+* Painel interativo por estado (Top 5 do estado)
+* Gráfico trimestral por operadora
+* Indicador de status da API (online/offline)
+
+## 4.4 Como Utilizar!
+
+## ⚙️ Pré-requisitos
+
+* Docker
+* Docker Compose
+* Node.js 18+ (apenas para desenvolvimento local do frontend)
+
+---
+
+## 🔐 Variáveis de Ambiente
+
+Crie um arquivo `.env` na raiz do projeto:
+
+```env
+# Usuários
+POSTGRES_USER=sg
+API_USER=sg
+ETL_USER=sg
+BI_USER=sg
+
+#Passwords
+POSTGRES_PASSWORD=sg
+API_PASSWORD=sg
+ETL_PASSWORD=sg
+BI_PASSWORD=sg
+
+#Informações DB
+POSTGRES_DB=sg_db
+HOST=db
+PORTA=5432
+```
+
+
+## 🐳 Subindo o Ambiente (Docker)
+
+Na raiz do projeto, execute:
+
+```bash
+docker compose up --build
+```
+
+Fluxo automático:
+
+1. Banco PostgreSQL sobe
+2. Pipeline executa
+3. Importação RAW
+4. Processamento SILVER / APP
+5. API sobe
+
+A API estará disponível em:
+
+```
+http://localhost:8000
+```
+
+---
+
+## 🌐 Rodando o Frontend
+
+### Modo Desenvolvimento
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Acesse:
+
+```
+http://localhost:5173
+```
+
+### Modo Produção (Docker + Nginx)
+
+> (Opcional), caso deseje empacotar o frontend no container
+
+O frontend usa:
+
+```env
+VITE_API_BASE_URL=/api
+```
+
+E o Nginx faz proxy para o container da API.
+
+
+## 📊 Funcionalidades Visuais
+
+* 🗺️ **Mapa de Calor por UF**
+
+  * Mostra despesas totais por estado
+  * Clique em um estado para abrir painel lateral com Top 5 operadoras
+
+* 📈 **Histórico Trimestral**
+
+  * Exibido ao selecionar uma operadora na tabela
+
+* 🏆 **Ranking Nacional**
+
+  * Top 5 operadoras por despesas no Brasil
+
+---
+
+## ⚡ Performance
+
+Índices importantes no banco:
+
+```sql
+CREATE INDEX operadoras_uf_idx ON app.operadoras (uf);
+CREATE INDEX operadoras_razao_idx ON app.operadoras USING btree (razao_social);
+CREATE INDEX despesas_operadora_idx ON app.despesa_consolidada (operadora_id);
+```
+
+---
+
+## 🧪 Debug & Logs
+
+### Ver logs da API
+
+```bash
+docker compose logs api
+```
+
+### Ver logs do banco
+
+```bash
+docker compose logs db
+```
+
+
+
+## 👤 Autor
+
+Projeto desenvolvido por **Lincoln Silva**
+
 
