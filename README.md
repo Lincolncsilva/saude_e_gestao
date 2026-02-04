@@ -713,7 +713,7 @@ PORTA=5432
 Na raiz do projeto, execute:
 
 ```bash
-docker compose up --build
+docker compose up -d --build
 ```
 
 Fluxo automático:
