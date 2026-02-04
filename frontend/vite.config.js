@@ -23,9 +23,9 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/api': {
-          target: env.VITE_API_URL || 'http://localhost:8000',
+          target: env.VITE_API_BASE_URL || 'http://localhost:8000',
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, ''),
+          //rewrite: (path) => path.replace(/^\/api/, ''),
           secure: false
         }
       }
@@ -43,7 +43,11 @@ export default defineConfig(({ mode }) => {
     },
     // Configuração para variáveis de ambiente no cliente
     define: {
-      'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || '/api')
+      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(process.env.VITE_API_BASE_URL || '/api')
     }
+    // Adicione temporariamente no vite.config.js:
+    
+
   }
+  
 })

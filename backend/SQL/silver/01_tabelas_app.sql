@@ -48,8 +48,7 @@ CREATE TABLE app.operadoras (
 -- Indexação para performance nos JOINs e buscas
 CREATE INDEX operadoras_uf_idx ON app.operadoras (uf);
 CREATE INDEX operadoras_razao_idx ON app.operadoras USING btree (razao_social);
-CREATE INDEX IF NOT EXISTS despesas_operadora_idx ON app.despesa_consolidada (operadora_id);
-
+-- REMOVI O ÍNDICE DAQUI - será criado depois
 
 -- =========================
 -- FACT: despesas_consolidadas
@@ -72,6 +71,9 @@ CREATE TABLE app.despesas_consolidadas (
 
   PRIMARY KEY (operadora_id, ano, trimestre)
 );
+
+-- AGORA CRIE O ÍNDICE CORRETAMENTE (nome da tabela no plural)
+CREATE INDEX IF NOT EXISTS despesas_operadora_idx ON app.despesas_consolidadas (operadora_id);
 
 -- =========================
 -- GOLD: despesas_agregadas

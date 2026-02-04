@@ -114,7 +114,7 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useOperadorasStore } from "../stores/operadoras.store";
-import axios from "axios";
+import { http } from "@/api/http";
 
 import UiState from "../components/UiState.vue";
 import OperatorsTable from "../components/OperatorsTable.vue";
@@ -128,7 +128,7 @@ const apiOnline = ref(false);
 
 async function checkApi() {
   try {
-    await axios.get("http://localhost:8000/api/estatisticas", { timeout: 3000 });
+    await http.get("/api/estatisticas", { timeout: 3000 });    
     apiOnline.value = true;
   } catch {
     apiOnline.value = false;
@@ -210,7 +210,7 @@ function closeUfPopover() {
 
 // ---------------- UF ENDPOINTS ----------------
 async function fetchUfTotals() {
-  const { data } = await axios.get("http://localhost:8000/api/estatisticas/uf");
+  const { data } = await http.get("/api/estatisticas/uf");
   ufTotals.value = Array.isArray(data) ? data : [];
 }
 
@@ -280,9 +280,7 @@ async function onSelectUf(data) {
   };
   
   try {
-    const { data } = await axios.get(
-      `http://localhost:8000/api/estatisticas/uf/${encodeURIComponent(uf)}`
-    );
+    const { data } = await http.get(`/api/estatisticas/uf/${encodeURIComponent(uf)}`);
     ufTop5.value = data?.top5 || [];
     ufTotal.value = Number(data?.total_uf || 0);
   } catch (error) {
