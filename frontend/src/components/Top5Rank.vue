@@ -61,7 +61,7 @@ function money(v) {
 .body{ padding:12px 16px 16px; }
 table{ width:100%; border-collapse:collapse; }
 th, td{ border-top:1px solid var(--stroke); padding:10px; text-align:left; vertical-align:top; }
-th{ color:var(--muted); font-size:12px; }
-.name{ font-weight:700; font-size:12px; }
-.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono"; font-size:12px; }
+th{ color:var(--muted); font-size:16px; }
+.name{ font-weight:700; font-size:14px; }
+.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono"; font-size:15px; }
 </style>

@@ -201,7 +201,7 @@ const formatCnpj = (v) => {
 }
 
 .sectionTitle {
-  font-size: 24px;                  /* maior */
+  font-size: 28px;                  /* maior */
   font-weight: 900;
   letter-spacing: 0.3px;
   color: #1f1f2e;
@@ -223,7 +223,7 @@ const formatCnpj = (v) => {
   padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid var(--stroke);
-  min-width: 280px;
+  min-width: 650px;
   outline: none;
   background: #fff;
 }
@@ -256,7 +256,7 @@ const formatCnpj = (v) => {
   background: rgba(255,255,255,0.65);
   cursor: pointer;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .tableWrap { padding: 12px 16px 16px; }
@@ -265,11 +265,11 @@ table { width: 100%; border-collapse: collapse; }
 
 th, td { border-top: 1px solid var(--stroke); padding: 10px; text-align: left; }
 
-th { color: var(--muted); font-size: 12px; }
+th { color: var(--muted); font-size: 18px; }
 
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 .emptySmall { padding: 12px 0 0; color: var(--muted); font-size: 12px; }

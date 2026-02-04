@@ -121,11 +121,11 @@ import OperatorsTable from "../components/OperatorsTable.vue";
 import UfHeatmapMap from "../components/UfHeatmapMap.vue";
 import QuarterlyTrendBar from "../components/QuarterlyTrendBar.vue";
 import Top5Rank from "../components/Top5Rank.vue";
-import logo from "@/assets/lotus_SG.png";
+
 
 // ---------------- API STATUS ----------------
 const apiOnline = ref(false);
-
+const logo = '/lotus_SG.png';
 async function checkApi() {
   try {
     await http.get("/api/estatisticas", { timeout: 3000 });    
@@ -410,12 +410,13 @@ watch(
 }
 
 .brandName { 
-  font-weight: 900; 
+  font-weight: 900;
+  font-size: 30px; 
 }
 
 .brandTag { 
   color: var(--muted); 
-  font-size: 12px; 
+  font-size: 14px; 
   margin-top: 4px; 
 }
 
@@ -604,7 +605,7 @@ watch(
 }
 
 .ufRowCnpj {
-  font-size: 11px;
+  font-size: px;
   color: #7f8c8d;
 }
 
