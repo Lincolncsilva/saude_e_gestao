@@ -1,5 +1,17 @@
 # PROJETO SAUDE E GESTAO
 
+## Preview
+
+<p align="center">
+  <a href="docs/images/projeto_saude_e_gestao.png" target="_blank">
+    <img src="docs/images/projeto_saude_e_gestao.png" alt="Dashboard - Saúde e Gestão" width="950">
+  </a>
+</p>
+
+<p align="center">
+  <sub>Clique na imagem para abrir em tamanho real.</sub>
+</p>
+
 ## 🛠️ Stack Tecnológica
 
 ### Backend
